@@ -1,14 +1,16 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
 // username, passowrd
 // organizations
 // boards
 // issues
 
-const USERS = [{
-    id: 1,
-    username: "srajal",                                 
-    password: "123123"
-}];
+let USERS_ID = 1;
+let ORGANIZATIONS_ID = 1;
+let BOARDS_ID = 1;
+let ISSUES_ID = 1;
+
+const USERS = [];
 const ORGANIZATIONS = [{
     id: 1,
     title: "100xdevs",
@@ -29,6 +31,7 @@ const ISSUES = [{
 },];
 
 const app = express();
+app.use(express.json());
 // CREATE
 app.post("/signup", (req, res) => {
     const username = req.body.username
@@ -36,15 +39,42 @@ app.post("/signup", (req, res) => {
 
     const userExists = USERS.find(u => u.username === username);
     if(userExists) {
-        res.send(411).json({
+        res.status(411).json({
             msg: "user with this username already exists"
         })
         return;
     }
+
+    USERS.push({
+        username,
+        password,
+        id: USERS_ID++
+    })
+
+    res.json({
+        msg: "You have signed up successfully"
+    })
 })
 
 app.post("/signin", (req, res) => {
-    
+    const username = username;
+    const password = password;
+
+    const userExists = USERS.find(u => u.username === username && u.password === password);
+    if(!userExists) {
+        res.status(403).json({
+            msg: "Incorrect Credentials"
+        })
+    }
+
+    const token = jwt.sign({
+        userId: userExists.id
+    }, "attlasiansupersecret123123password")
+    // create a jwt for the user
+
+    res.json({
+        token
+    })
 })
 
 app.post("/organization", (req, res) => {
@@ -68,7 +98,7 @@ app.get("/boards", (req, res) => {
 
 })
 
-app.get("/issues", (res, res) => {
+app.get("/issues", (req, res) => {
 
 })
 
