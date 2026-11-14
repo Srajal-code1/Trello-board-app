@@ -112,12 +112,68 @@ app.post("/add-member-to-organization", authMiddleware, (req, res) => {
 
 })
 
-app.post("/board", (req, res) => {
-    
+// only the admin of an org can create a board in it
+app.post("/board", authMiddleware, (req, res) => {
+    const userId = req.userId;
+    const organizationId = req.body.organizationId;
+    const title = req.body.title;
+
+    const organization = ORGANIZATIONS.find(org => org.id === organizationId);
+
+    if(!organization || organization.admin !== userId) {
+        res.status(411).json({
+            msg: "Either this org does not exist or you or not an admin of this org"
+        })
+        return
+    }
+
+    BOARDS.push({
+        id: BOARDS_ID++,
+        title,
+        organizationId
+    })
+
+    res.json({
+        msg: "Board created",
+        id: BOARDS_ID - 1
+    })
 })
 
-app.post("/issue", (req, res) => {
-    
+// admin or any member of the board's org can create an issue
+app.post("/issue", authMiddleware, (req, res) => {
+    const userId = req.userId;
+    const boardId = req.body.boardId;
+    const title = req.body.title;
+
+    const board = BOARDS.find(b => b.id === boardId);
+
+    if(!board) {
+        res.status(411).json({
+            msg: "No board with this id exists"
+        })
+        return
+    }
+
+    const organization = ORGANIZATIONS.find(org => org.id === board.organizationId);
+
+    if(!organization || (organization.admin !== userId && !organization.members.includes(userId))) {
+        res.status(411).json({
+            msg: "You are not a part of this org"
+        })
+        return
+    }
+
+    ISSUES.push({
+        id: ISSUES_ID++,
+        title,
+        boardId,
+        state: "NEXT_UP"
+    })
+
+    res.json({
+        msg: "Issue created",
+        id: ISSUES_ID - 1
+    })
 })
 
 // GET ENDPOINTS
@@ -149,21 +205,125 @@ app.get("/organization", authMiddleware, (req, res) => {
         }
     })
 })
-app.get("/boards", (req, res) => {
+// GET /boards?organizationId=1
+app.get("/boards", authMiddleware, (req, res) => {
+    const userId = req.userId;
+    const organizationId = parseInt(req.query.organizationId);
 
+    const organization = ORGANIZATIONS.find(org => org.id === organizationId);
+
+    if(!organization || (organization.admin !== userId && !organization.members.includes(userId))) {
+        res.status(411).json({
+            msg: "Either this org does not exist or you are not a part of this org"
+        })
+        return
+    }
+
+    const boards = BOARDS.filter(board => board.organizationId === organizationId);
+
+    res.json({
+        boards
+    })
 })
 
-app.get("/issues", (req, res) => {
+// GET /issues?boardId=1
+app.get("/issues", authMiddleware, (req, res) => {
+    const userId = req.userId;
+    const boardId = parseInt(req.query.boardId);
 
+    const board = BOARDS.find(b => b.id === boardId);
+
+    if(!board) {
+        res.status(411).json({
+            msg: "No board with this id exists"
+        })
+        return
+    }
+
+    const organization = ORGANIZATIONS.find(org => org.id === board.organizationId);
+
+    if(!organization || (organization.admin !== userId && !organization.members.includes(userId))) {
+        res.status(411).json({
+            msg: "You are not a part of this org"
+        })
+        return
+    }
+
+    const issues = ISSUES.filter(issue => issue.boardId === boardId);
+
+    res.json({
+        issues
+    })
 })
 
-app.get("/members", (req, res) => {
+// GET /members?organizationId=1
+app.get("/members", authMiddleware, (req, res) => {
+    const userId = req.userId;
+    const organizationId = parseInt(req.query.organizationId);
 
+    const organization = ORGANIZATIONS.find(org => org.id === organizationId);
+
+    if(!organization || (organization.admin !== userId && !organization.members.includes(userId))) {
+        res.status(411).json({
+            msg: "Either this org does not exist or you are not a part of this org"
+        })
+        return
+    }
+
+    const members = organization.members.map(memberId => {
+        const user = USERS.find(u => u.id === memberId);
+        return {
+            id: user.id,
+            username: user.username
+        }
+    })
+
+    res.json({
+        members
+    })
 })
 
 // UPDATE
-app.put("/issues", (req, res) => {
+// move an issue to a different state, e.g. NEXT_UP -> IN_PROGRESS
+app.put("/issues", authMiddleware, (req, res) => {
+    const userId = req.userId;
+    const issueId = req.body.issueId;
+    const state = req.body.state;
 
+    const ALLOWED_STATES = ["NEXT_UP", "IN_PROGRESS", "DONE", "ARCHIVED"];
+
+    if(!ALLOWED_STATES.includes(state)) {
+        res.status(411).json({
+            msg: "State must be one of " + ALLOWED_STATES.join(", ")
+        })
+        return
+    }
+
+    const issue = ISSUES.find(i => i.id === issueId);
+
+    if(!issue) {
+        res.status(411).json({
+            msg: "No issue with this id exists"
+        })
+        return
+    }
+
+    const board = BOARDS.find(b => b.id === issue.boardId);
+    const organization = board && ORGANIZATIONS.find(org => org.id === board.organizationId);
+
+    if(!organization || (organization.admin !== userId && !organization.members.includes(userId))) {
+        res.status(411).json({
+            msg: "You are not a part of this org"
+        })
+        return
+    }
+
+    issue.state = state;
+
+    res.json({
+        msg: "Issue updated",
+        issue
+    })
 })
 
 //DELETE
