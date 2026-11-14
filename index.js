@@ -12,24 +12,9 @@ let BOARDS_ID = 1;
 let ISSUES_ID = 1;
 
 const USERS = [];
-const ORGANIZATIONS = [{
-    id: 1,
-    title: "100xdevs",
-    description: "Learning coding platform",
-    admin: 1,
-    members: [2]
-}];
-const BOARDS = [{
-    id: 1,
-    title: "100xschool website frontend",
-    organizationId: 1
-}];
-const ISSUES = [{
-    id: 1,
-    title: "Add dark mode",
-    boardId: 1,
-    state: "IN_PROGRESS"  // NEXT_UP | "IN_PROGRESS" | "DONE" | ARCHIVED
-},];
+const ORGANIZATIONS = [];
+const BOARDS = [];
+const ISSUES = [];
 
 const app = express();
 app.use(express.json());
