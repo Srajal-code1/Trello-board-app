@@ -1,5 +1,6 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const { authMiddleware } = require("./middleware")
 // username, passowrd
 // organizations
 // boards
@@ -57,19 +58,20 @@ app.post("/signup", (req, res) => {
 })
 
 app.post("/signin", (req, res) => {
-    const username = username;
-    const password = password;
+    const username = req.body.username;
+    const password = req.body.password;
 
     const userExists = USERS.find(u => u.username === username && u.password === password);
     if(!userExists) {
         res.status(403).json({
             msg: "Incorrect Credentials"
         })
+        return;
     }
 
     const token = jwt.sign({
         userId: userExists.id
-    }, "attlasiansupersecret123123password")
+    }, "attlasiansupersecret123123password");
     // create a jwt for the user
 
     res.json({
@@ -77,7 +79,8 @@ app.post("/signin", (req, res) => {
     })
 })
 
-app.post("/organization", (req, res) => {
+// AUTHENTICATED ROUTE -- MIDDLEWARE
+app.post("/organization", authMiddleware, (req, res) => {
     
 })
 
